@@ -1,0 +1,40 @@
+{
+    "name": "@school/shared",
+    "version": "1.0.0",
+    "private": true,
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "default": "./dist/index.js"
+        },
+        "./constants": {
+            "types": "./dist/constants/index.d.ts",
+            "default": "./dist/constants/index.js"
+        },
+        "./types": {
+            "types": "./dist/types/index.d.ts",
+            "default": "./dist/types/index.js"
+        },
+        "./utils": {
+            "types": "./dist/utils/index.d.ts",
+            "default": "./dist/utils/index.js"
+        },
+        "./validators": {
+            "types": "./dist/validators/index.d.ts",
+            "default": "./dist/validators/index.js"
+        }
+    },
+    "scripts": {
+        "build": "tsc",
+        "clean": "rimraf dist"
+    },
+    "dependencies": {
+        "zod": "^3.22.4"
+    },
+    "devDependencies": {
+        "rimraf": "^5.0.5",
+        "typescript": "^5.3.0"
+    }
+}

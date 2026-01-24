@@ -1,0 +1,996 @@
+// Thai School Learning Management System - Complete Database Schema
+// Designed for Thai education system (ป.1 - ม.6)
+// Supports future multi-tenant architecture
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// CORE USER & AUTHENTICATION
+// =============================================================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  phone         String?   @unique
+  passwordHash  String
+  role          UserRole
+  isActive      Boolean   @default(true)
+  lastLoginAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Multi-tenant support (for future)
+  tenantId      String?
+  tenant        Tenant?   @relation(fields: [tenantId], references: [id])
+
+  // Role-specific profiles
+  student       Student?
+  teacher       Teacher?
+  parent        Parent?
+  admin         Admin?
+
+  // Activity
+  notifications UserNotification[]
+  messages      Message[]          @relation("SentMessages")
+  receivedMsgs  Message[]          @relation("ReceivedMessages")
+
+  @@index([email])
+  @@index([tenantId])
+}
+
+enum UserRole {
+  SUPER_ADMIN   // ผู้ดูแลระบบสูงสุด
+  ADMIN         // ผู้อำนวยการ/รองผู้อำนวยการ
+  TEACHER       // ครู
+  STUDENT       // นักเรียน
+  PARENT        // ผู้ปกครอง
+}
+
+// Multi-tenant support (for future expansion)
+model Tenant {
+  id          String   @id @default(cuid())
+  code        String   @unique   // รหัสโรงเรียน
+  name        String             // ชื่อโรงเรียน
+  nameEn      String?
+  address     String?
+  phone       String?
+  email       String?
+  logo        String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users       User[]
+  settings    TenantSettings?
+}
+
+model TenantSettings {
+  id              String   @id @default(cuid())
+  tenantId        String   @unique
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+  
+  // Grading settings
+  passingGrade    Float    @default(1.0)
+  gradeScale      Json?    // Custom grade scale
+  
+  // Academic settings
+  semestersPerYear Int     @default(2)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// =============================================================================
+// ROLE-SPECIFIC PROFILES
+// =============================================================================
+
+model Student {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Thai National ID (เลขประจำตัวประชาชน 13 หลัก)
+  nationalId      String    @unique
+  studentCode     String    @unique   // รหัสนักเรียน
+  
+  // Personal Info
+  titleTh         String              // นาย, นางสาว, เด็กชาย, เด็กหญิง
+  firstNameTh     String
+  lastNameTh      String
+  titleEn         String?
+  firstNameEn     String?
+  lastNameEn      String?
+  nickname        String?
+  gender          Gender
+  birthDate       DateTime
+  bloodType       BloodType?
+  
+  // Contact
+  address         String?
+  subDistrict     String?   // ตำบล
+  district        String?   // อำเภอ
+  province        String?   // จังหวัด
+  postalCode      String?
+  
+  // Education
+  classroomId     String
+  classroom       Classroom @relation(fields: [classroomId], references: [id])
+  studentNumber   Int       // เลขที่
+  enrollmentDate  DateTime
+  studyPlan       StudyPlan? // แผนการเรียน (วิทย์-คณิต, ศิลป์-ภาษา)
+  
+  // Photo
+  photoUrl        String?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  parents         StudentParent[]
+  enrollments     SubjectEnrollment[]
+  submissions     Submission[]
+  examAttempts    ExamAttempt[]
+  grades          Grade[]
+  attendances     Attendance[]
+  behaviorScores  BehaviorScore[]
+
+  @@index([classroomId])
+  @@index([nationalId])
+}
+
+model Teacher {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Thai National ID
+  nationalId      String    @unique
+  employeeCode    String    @unique   // รหัสพนักงาน
+  
+  // Personal Info
+  titleTh         String              // นาย, นาง, นางสาว
+  firstNameTh     String
+  lastNameTh      String
+  titleEn         String?
+  firstNameEn     String?
+  lastNameEn      String?
+  
+  // Professional
+  position        String?             // ตำแหน่ง
+  department      String?             // กลุ่มสาระ
+  educationLevel  String?             // วุฒิการศึกษา
+  specialization  String?             // วิชาเอก
+  
+  photoUrl        String?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  teachingSubjects TeachingAssignment[]
+  advisorOf        Classroom[]         @relation("ClassroomAdvisor")
+  createdLessons   Lesson[]
+  createdAssignments Assignment[]
+  createdExams     Exam[]
+  gradedSubmissions Submission[]       @relation("GradedBy")
+
+  @@index([employeeCode])
+}
+
+model Parent {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Personal Info
+  titleTh         String
+  firstNameTh     String
+  lastNameTh      String
+  
+  relationship    ParentRelationship
+  occupation      String?
+  workplace       String?
+  
+  // Contact
+  phone           String
+  lineId          String?
+  address         String?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  children        StudentParent[]
+}
+
+model Admin {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  titleTh         String
+  firstNameTh     String
+  lastNameTh      String
+  position        String
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model StudentParent {
+  id          String   @id @default(cuid())
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  parentId    String
+  parent      Parent   @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  isPrimary   Boolean  @default(false)  // ผู้ปกครองหลัก
+  
+  createdAt   DateTime @default(now())
+
+  @@unique([studentId, parentId])
+}
+
+// =============================================================================
+// EDUCATION STRUCTURE (Thai System)
+// =============================================================================
+
+model AcademicYear {
+  id              String    @id @default(cuid())
+  year            Int       // ปีการศึกษา e.g., 2567
+  name            String    // ปีการศึกษา 2567
+  startDate       DateTime
+  endDate         DateTime
+  isCurrent       Boolean   @default(false)
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  semesters       Semester[]
+  classrooms      Classroom[]
+
+  @@unique([year])
+}
+
+model Semester {
+  id              String    @id @default(cuid())
+  academicYearId  String
+  academicYear    AcademicYear @relation(fields: [academicYearId], references: [id])
+  
+  number          Int       // 1 or 2
+  name            String    // ภาคเรียนที่ 1
+  startDate       DateTime
+  endDate         DateTime
+  isCurrent       Boolean   @default(false)
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  gradingPeriods  GradingPeriod[]
+  subjectInstances SubjectInstance[]
+
+  @@unique([academicYearId, number])
+}
+
+model GradeLevel {
+  id          String         @id @default(cuid())
+  code        String         @unique   // P1-P6, M1-M6
+  nameTh      String                   // ป.1, ม.6
+  nameEn      String                   // Grade 1, Grade 12
+  level       Int                      // 1-12
+  stage       EducationStage
+  order       Int                      // For sorting
+  
+  classrooms  Classroom[]
+  subjects    Subject[]      @relation("GradeLevelSubjects")
+}
+
+model Classroom {
+  id              String    @id @default(cuid())
+  academicYearId  String
+  academicYear    AcademicYear @relation(fields: [academicYearId], references: [id])
+  gradeLevelId    String
+  gradeLevel      GradeLevel @relation(fields: [gradeLevelId], references: [id])
+  
+  room            Int       // ห้อง 1, 2, 3...
+  name            String    // ม.3/1, ป.1/2
+  capacity        Int       @default(40)
+  studyPlan       StudyPlan?
+  
+  // Advisor (ครูที่ปรึกษา)
+  advisorId       String?
+  advisor         Teacher?  @relation("ClassroomAdvisor", fields: [advisorId], references: [id])
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  students        Student[]
+  schedules       ClassSchedule[]
+
+  @@unique([academicYearId, gradeLevelId, room])
+}
+
+// =============================================================================
+// SUBJECTS & CURRICULUM (8 Learning Areas)
+// =============================================================================
+
+model SubjectArea {
+  id          String    @id @default(cuid())
+  code        String    @unique   // THA, MAT, SCI, etc.
+  nameTh      String              // ภาษาไทย, คณิตศาสตร์
+  nameEn      String              // Thai Language, Mathematics
+  color       String?             // For UI display
+  icon        String?
+  order       Int       @default(0)
+  
+  subjects    Subject[]
+}
+
+model Subject {
+  id              String    @id @default(cuid())
+  code            String    @unique   // ท11101, ค21101
+  nameTh          String              // ภาษาไทยพื้นฐาน
+  nameEn          String?
+  description     String?
+  
+  subjectAreaId   String
+  subjectArea     SubjectArea @relation(fields: [subjectAreaId], references: [id])
+  
+  credits         Float     @default(1.0)   // หน่วยกิต
+  hoursPerWeek    Int       @default(1)
+  
+  // Applicable grade levels
+  gradeLevels     GradeLevel[] @relation("GradeLevelSubjects")
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  instances       SubjectInstance[]
+  questionBanks   QuestionBank[]
+
+  @@index([subjectAreaId])
+}
+
+model SubjectInstance {
+  id              String    @id @default(cuid())
+  subjectId       String
+  subject         Subject   @relation(fields: [subjectId], references: [id])
+  semesterId      String
+  semester        Semester  @relation(fields: [semesterId], references: [id])
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  teachings       TeachingAssignment[]
+  enrollments     SubjectEnrollment[]
+  lessons         Lesson[]
+  assignments     Assignment[]
+  exams           Exam[]
+  grades          Grade[]
+
+  @@unique([subjectId, semesterId])
+}
+
+model TeachingAssignment {
+  id                  String    @id @default(cuid())
+  teacherId           String
+  teacher             Teacher   @relation(fields: [teacherId], references: [id])
+  subjectInstanceId   String
+  subjectInstance     SubjectInstance @relation(fields: [subjectInstanceId], references: [id])
+  
+  createdAt           DateTime  @default(now())
+
+  @@unique([teacherId, subjectInstanceId])
+}
+
+model SubjectEnrollment {
+  id                  String    @id @default(cuid())
+  studentId           String
+  student             Student   @relation(fields: [studentId], references: [id])
+  subjectInstanceId   String
+  subjectInstance     SubjectInstance @relation(fields: [subjectInstanceId], references: [id])
+  
+  enrolledAt          DateTime  @default(now())
+
+  @@unique([studentId, subjectInstanceId])
+}
+
+// =============================================================================
+// LESSONS & CONTENT
+// =============================================================================
+
+model Lesson {
+  id                  String    @id @default(cuid())
+  subjectInstanceId   String
+  subjectInstance     SubjectInstance @relation(fields: [subjectInstanceId], references: [id])
+  
+  title               String
+  description         String?
+  order               Int       @default(0)
+  
+  // Versioning
+  version             Int       @default(1)
+  isPublished         Boolean   @default(false)
+  publishedAt         DateTime?
+  
+  createdById         String
+  createdBy           Teacher   @relation(fields: [createdById], references: [id])
+  
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  contents            LessonContent[]
+
+  @@index([subjectInstanceId])
+}
+
+model LessonContent {
+  id          String    @id @default(cuid())
+  lessonId    String
+  lesson      Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  
+  type        ContentType
+  title       String
+  content     String?   @db.Text   // Rich text for TEXT type
+  fileUrl     String?              // For VIDEO, PDF, AUDIO
+  fileSize    Int?
+  duration    Int?                 // For VIDEO, AUDIO (seconds)
+  order       Int       @default(0)
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([lessonId])
+}
+
+// =============================================================================
+// ASSIGNMENTS
+// =============================================================================
+
+model Assignment {
+  id                  String    @id @default(cuid())
+  subjectInstanceId   String
+  subjectInstance     SubjectInstance @relation(fields: [subjectInstanceId], references: [id])
+  
+  title               String
+  description         String?   @db.Text
+  instructions        String?   @db.Text
+  
+  type                AssignmentType
+  maxScore            Float     @default(100)
+  weight              Float     @default(1.0)   // Weight in grading
+  
+  // Schedule
+  assignedDate        DateTime  @default(now())
+  dueDate             DateTime
+  allowLateSubmission Boolean   @default(true)
+  latePenaltyPercent  Float     @default(10)    // % deduction per day
+  
+  // Attachments
+  attachments         Json?     // Array of file URLs
+  
+  createdById         String
+  createdBy           Teacher   @relation(fields: [createdById], references: [id])
+  
+  isPublished         Boolean   @default(false)
+  publishedAt         DateTime?
+  
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  submissions         Submission[]
+
+  @@index([subjectInstanceId])
+  @@index([dueDate])
+}
+
+model Submission {
+  id              String    @id @default(cuid())
+  assignmentId    String
+  assignment      Assignment @relation(fields: [assignmentId], references: [id])
+  studentId       String
+  student         Student   @relation(fields: [studentId], references: [id])
+  
+  // Submitted content
+  content         String?   @db.Text
+  files           Json?     // Array of file URLs
+  
+  // Status
+  status          SubmissionStatus @default(PENDING)
+  submittedAt     DateTime?
+  isLate          Boolean   @default(false)
+  
+  // Grading
+  score           Float?
+  feedback        String?   @db.Text
+  gradedById      String?
+  gradedBy        Teacher?  @relation("GradedBy", fields: [gradedById], references: [id])
+  gradedAt        DateTime?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([assignmentId, studentId])
+  @@index([studentId])
+}
+
+// =============================================================================
+// EXAMS & QUESTION BANK
+// =============================================================================
+
+model QuestionBank {
+  id          String    @id @default(cuid())
+  subjectId   String
+  subject     Subject   @relation(fields: [subjectId], references: [id])
+  
+  name        String
+  description String?
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  questions   Question[]
+
+  @@index([subjectId])
+}
+
+model Question {
+  id              String    @id @default(cuid())
+  questionBankId  String
+  questionBank    QuestionBank @relation(fields: [questionBankId], references: [id])
+  
+  type            QuestionType
+  content         String    @db.Text
+  explanation     String?   @db.Text
+  
+  // For MCQ
+  options         Json?     // Array of {id, text, isCorrect}
+  
+  // For matching
+  matchingPairs   Json?     // Array of {left, right}
+  
+  // For fill-in-blank
+  correctAnswer   String?
+  acceptedAnswers Json?     // Array of alternative correct answers
+  
+  // Metadata
+  difficulty      Difficulty @default(MEDIUM)
+  points          Float     @default(1)
+  tags            String[]
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  examQuestions   ExamQuestion[]
+
+  @@index([questionBankId])
+  @@index([type])
+}
+
+model Exam {
+  id                  String    @id @default(cuid())
+  subjectInstanceId   String
+  subjectInstance     SubjectInstance @relation(fields: [subjectInstanceId], references: [id])
+  
+  title               String
+  description         String?
+  instructions        String?   @db.Text
+  
+  type                ExamType
+  maxScore            Float
+  passingScore        Float?
+  
+  // Schedule
+  startTime           DateTime
+  endTime             DateTime
+  duration            Int       // Minutes
+  
+  // Settings
+  shuffleQuestions    Boolean   @default(false)
+  shuffleOptions      Boolean   @default(false)
+  showResult          Boolean   @default(true)
+  showCorrectAnswers  Boolean   @default(false)
+  allowReview         Boolean   @default(true)
+  maxAttempts         Int       @default(1)
+  
+  // Anti-cheat
+  preventTabSwitch    Boolean   @default(true)
+  requireCamera       Boolean   @default(false)
+  
+  createdById         String
+  createdBy           Teacher   @relation(fields: [createdById], references: [id])
+  
+  isPublished         Boolean   @default(false)
+  publishedAt         DateTime?
+  
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  questions           ExamQuestion[]
+  attempts            ExamAttempt[]
+
+  @@index([subjectInstanceId])
+  @@index([startTime])
+}
+
+model ExamQuestion {
+  id          String    @id @default(cuid())
+  examId      String
+  exam        Exam      @relation(fields: [examId], references: [id], onDelete: Cascade)
+  questionId  String
+  question    Question  @relation(fields: [questionId], references: [id])
+  
+  order       Int
+  points      Float     // Can override question's default points
+  
+  @@unique([examId, questionId])
+  @@index([examId])
+}
+
+model ExamAttempt {
+  id          String    @id @default(cuid())
+  examId      String
+  exam        Exam      @relation(fields: [examId], references: [id])
+  studentId   String
+  student     Student   @relation(fields: [studentId], references: [id])
+  
+  attemptNumber Int     @default(1)
+  status        ExamAttemptStatus @default(IN_PROGRESS)
+  
+  startedAt     DateTime @default(now())
+  submittedAt   DateTime?
+  
+  // Results
+  score         Float?
+  correctCount  Int?
+  totalQuestions Int?
+  
+  // Answers stored as JSON
+  answers       Json?   // Array of {questionId, answer, isCorrect, points}
+  
+  // Anti-cheat logs
+  tabSwitchCount Int    @default(0)
+  activityLog    Json?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([examId])
+  @@index([studentId])
+}
+
+// =============================================================================
+// GRADING & REPORTS
+// =============================================================================
+
+model GradingPeriod {
+  id          String    @id @default(cuid())
+  semesterId  String
+  semester    Semester  @relation(fields: [semesterId], references: [id])
+  
+  name        String    // กลางภาค, ปลายภาค
+  type        GradingPeriodType
+  weight      Float     // e.g., 0.3 for 30%
+  startDate   DateTime
+  endDate     DateTime
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  grades      Grade[]
+
+  @@unique([semesterId, type])
+}
+
+model Grade {
+  id                  String    @id @default(cuid())
+  studentId           String
+  student             Student   @relation(fields: [studentId], references: [id])
+  subjectInstanceId   String
+  subjectInstance     SubjectInstance @relation(fields: [subjectInstanceId], references: [id])
+  gradingPeriodId     String?
+  gradingPeriod       GradingPeriod? @relation(fields: [gradingPeriodId], references: [id])
+  
+  // Scores
+  classworkScore      Float?    // คะแนนเก็บ
+  midtermScore        Float?    // สอบกลางภาค
+  finalScore          Float?    // สอบปลายภาค
+  behaviorScore       Float?    // คะแนนพฤติกรรม
+  
+  totalScore          Float?
+  percentage          Float?
+  gradePoint          Float?    // 4.0, 3.5, 3.0, etc.
+  gradeLabel          String?   // A, B+, B, etc.
+  
+  remarks             String?
+  
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@unique([studentId, subjectInstanceId, gradingPeriodId])
+  @@index([studentId])
+  @@index([subjectInstanceId])
+}
+
+model BehaviorScore {
+  id          String    @id @default(cuid())
+  studentId   String
+  student     Student   @relation(fields: [studentId], references: [id])
+  
+  category    String    // ความประพฤติ, ความรับผิดชอบ, etc.
+  score       Float
+  maxScore    Float
+  remarks     String?
+  recordedAt  DateTime  @default(now())
+  
+  @@index([studentId])
+}
+
+// =============================================================================
+// ATTENDANCE
+// =============================================================================
+
+model Attendance {
+  id          String    @id @default(cuid())
+  studentId   String
+  student     Student   @relation(fields: [studentId], references: [id])
+  
+  date        DateTime  @db.Date
+  status      AttendanceStatus
+  
+  // For class-specific attendance
+  classScheduleId String?
+  classSchedule   ClassSchedule? @relation(fields: [classScheduleId], references: [id])
+  
+  checkInTime   DateTime?
+  checkOutTime  DateTime?
+  remarks       String?
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([studentId, date, classScheduleId])
+  @@index([studentId])
+  @@index([date])
+}
+
+model ClassSchedule {
+  id          String    @id @default(cuid())
+  classroomId String
+  classroom   Classroom @relation(fields: [classroomId], references: [id])
+  
+  dayOfWeek   Int       // 1-7 (Monday-Sunday)
+  periodNumber Int
+  startTime   String    // "08:30"
+  endTime     String    // "09:20"
+  
+  subjectInstanceId String?
+  room              String?   // ห้องเรียน
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  attendances Attendance[]
+
+  @@index([classroomId])
+}
+
+// =============================================================================
+// COMMUNICATION
+// =============================================================================
+
+model Announcement {
+  id          String    @id @default(cuid())
+  title       String
+  content     String    @db.Text
+  
+  type        AnnouncementType
+  priority    Priority  @default(NORMAL)
+  
+  // Targeting
+  targetRoles UserRole[]
+  targetGradeLevels String[]  // Grade level IDs
+  targetClassrooms  String[]  // Classroom IDs
+  
+  attachments Json?     // Array of file URLs
+  
+  isPublished Boolean   @default(false)
+  publishedAt DateTime?
+  expiresAt   DateTime?
+  
+  createdById String
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([isPublished])
+  @@index([publishedAt])
+}
+
+model Message {
+  id          String    @id @default(cuid())
+  senderId    String
+  sender      User      @relation("SentMessages", fields: [senderId], references: [id])
+  receiverId  String
+  receiver    User      @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  
+  content     String    @db.Text
+  attachments Json?
+  
+  isRead      Boolean   @default(false)
+  readAt      DateTime?
+  
+  createdAt   DateTime  @default(now())
+
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([createdAt])
+}
+
+model UserNotification {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  
+  type        NotificationType
+  title       String
+  content     String
+  link        String?
+  data        Json?
+  
+  isRead      Boolean   @default(false)
+  readAt      DateTime?
+  
+  createdAt   DateTime  @default(now())
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+// =============================================================================
+// ENUMS
+// =============================================================================
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum BloodType {
+  A
+  B
+  AB
+  O
+}
+
+enum StudyPlan {
+  SCIENCE_MATH      // วิทย์-คณิต
+  ARTS_LANGUAGE     // ศิลป์-ภาษา
+  ARTS_SOCIAL       // ศิลป์-สังคม
+  ARTS_GENERAL      // ศิลป์-ทั่วไป
+  VOCATIONAL        // อาชีวศึกษา
+  GENERAL           // ทั่วไป
+}
+
+enum ParentRelationship {
+  FATHER            // บิดา
+  MOTHER            // มารดา
+  GUARDIAN          // ผู้ปกครอง
+  GRANDFATHER       // ปู่/ตา
+  GRANDMOTHER       // ย่า/ยาย
+  UNCLE             // ลุง/อา
+  AUNT              // ป้า/น้า
+  SIBLING           // พี่/น้อง
+  OTHER             // อื่นๆ
+}
+
+enum EducationStage {
+  PRIMARY           // ประถมศึกษา (ป.1-6)
+  LOWER_SECONDARY   // มัธยมศึกษาตอนต้น (ม.1-3)
+  UPPER_SECONDARY   // มัธยมศึกษาตอนปลาย (ม.4-6)
+}
+
+enum ContentType {
+  TEXT              // Rich text content
+  VIDEO             // Video file
+  PDF               // PDF document
+  AUDIO             // Audio file
+  SLIDE             // Presentation
+  LINK              // External link
+  QUIZ              // Interactive quiz
+}
+
+enum AssignmentType {
+  HOMEWORK          // การบ้าน
+  PROJECT           // โครงงาน
+  EXERCISE          // แบบฝึกหัด
+  REPORT            // รายงาน
+  PRESENTATION      // การนำเสนอ
+}
+
+enum SubmissionStatus {
+  PENDING           // รอส่ง
+  SUBMITTED         // ส่งแล้ว
+  LATE              // ส่งช้า
+  GRADED            // ตรวจแล้ว
+  RETURNED          // ส่งคืนให้แก้ไข
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE   // ปรนัย
+  TRUE_FALSE        // ถูก-ผิด
+  ESSAY             // อัตนัย
+  MATCHING          // จับคู่
+  FILL_BLANK        // เติมคำ
+  SHORT_ANSWER      // ตอบสั้น
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum ExamType {
+  QUIZ              // ทดสอบย่อย
+  MIDTERM           // สอบกลางภาค
+  FINAL             // สอบปลายภาค
+  PRACTICE          // ฝึกหัด
+}
+
+enum ExamAttemptStatus {
+  IN_PROGRESS
+  SUBMITTED
+  GRADED
+  EXPIRED
+}
+
+enum GradingPeriodType {
+  CLASSWORK         // งานเก็บคะแนน
+  MIDTERM           // กลางภาค
+  FINAL             // ปลายภาค
+  BEHAVIOR          // พฤติกรรม
+  ACTIVITY          // กิจกรรม
+}
+
+enum AttendanceStatus {
+  PRESENT           // มา
+  ABSENT            // ขาด
+  LATE              // สาย
+  SICK_LEAVE        // ลาป่วย
+  PERSONAL_LEAVE    // ลากิจ
+  EXCUSED           // ได้รับอนุญาต
+}
+
+enum AnnouncementType {
+  GENERAL           // ทั่วไป
+  ACADEMIC          // วิชาการ
+  ACTIVITY          // กิจกรรม
+  URGENT            // เร่งด่วน
+}
+
+enum Priority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum NotificationType {
+  ASSIGNMENT_NEW
+  ASSIGNMENT_DUE
+  ASSIGNMENT_GRADED
+  EXAM_UPCOMING
+  EXAM_RESULT
+  GRADE_UPDATED
+  MESSAGE_NEW
+  ANNOUNCEMENT
+  SYSTEM
+}
