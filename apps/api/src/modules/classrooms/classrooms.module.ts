@@ -1,4 +1,14 @@
-import { Module } from '@nestjs/common';
+// Classrooms Module
 
-@Module({})
+import { Module } from '@nestjs/common';
+import { ClassroomsService } from './classrooms.service';
+import { ClassroomsController } from './classrooms.controller';
+import { DatabaseModule } from '../../database/database.module';
+
+@Module({
+    imports: [DatabaseModule],
+    controllers: [ClassroomsController],
+    providers: [ClassroomsService],
+    exports: [ClassroomsService],
+})
 export class ClassroomsModule { }

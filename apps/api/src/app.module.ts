@@ -19,6 +19,7 @@ import { GradesModule } from './modules/grades/grades.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { UploadModule } from './modules/upload/upload.module';
+import { AcademicYearsModule } from './modules/academic-years/academic-years.module';
 
 @Module({
     imports: [
@@ -46,6 +47,7 @@ import { UploadModule } from './modules/upload/upload.module';
         NotificationsModule,
         AdminModule,
         UploadModule,
+        AcademicYearsModule,
     ],
 })
 export class AppModule { }

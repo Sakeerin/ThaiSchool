@@ -1,7 +1,14 @@
-// Stub modules - Teachers, Parents, Classrooms, Subjects, Lessons, Assignments, Exams, Grades, Notifications, Admin, Upload
-// These are minimal placeholders that will be expanded in subsequent phases
+// Teachers Module
 
 import { Module } from '@nestjs/common';
+import { TeachersService } from './teachers.service';
+import { TeachersController } from './teachers.controller';
+import { DatabaseModule } from '../../database/database.module';
 
-@Module({})
+@Module({
+    imports: [DatabaseModule],
+    controllers: [TeachersController],
+    providers: [TeachersService],
+    exports: [TeachersService],
+})
 export class TeachersModule { }
