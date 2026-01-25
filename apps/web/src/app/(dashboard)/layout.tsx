@@ -29,6 +29,8 @@ const roleNavigation: Record<string, { label: string; href: string; icon: any }[
     ADMIN: [
         { label: 'ภาพรวม', href: '/dashboard/admin', icon: Home },
         { label: 'จัดการผู้ใช้', href: '/dashboard/admin/users', icon: Users },
+        { label: 'นักเรียน', href: '/dashboard/admin/students', icon: GraduationCap },
+        { label: 'ครู', href: '/dashboard/admin/teachers', icon: Users },
         { label: 'จัดการชั้นเรียน', href: '/dashboard/admin/classrooms', icon: BookOpen },
         { label: 'จัดการวิชา', href: '/dashboard/admin/subjects', icon: ClipboardList },
         { label: 'รายงาน', href: '/dashboard/admin/reports', icon: BarChart3 },
