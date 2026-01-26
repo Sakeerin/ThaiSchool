@@ -258,4 +258,67 @@ export class LessonsService {
             },
         });
     }
+
+    async findByTeacher(teacherId: string) {
+        return this.prisma.lesson.findMany({
+            where: { createdById: teacherId },
+            orderBy: [{ updatedAt: 'desc' }],
+            include: {
+                subjectInstance: {
+                    include: {
+                        subject: { include: { subjectArea: true } },
+                        semester: { include: { academicYear: true } },
+                    },
+                },
+                _count: { select: { contents: true } },
+            },
+        });
+    }
+
+    async findForStudent(studentId: string) {
+        // Get student's enrolled subject instances
+        const enrollments = await this.prisma.subjectEnrollment.findMany({
+            where: { studentId },
+            select: { subjectInstanceId: true },
+        });
+
+        const subjectInstanceIds = enrollments.map((e) => e.subjectInstanceId);
+
+        // Get published lessons for enrolled subjects
+        return this.prisma.lesson.findMany({
+            where: {
+                subjectInstanceId: { in: subjectInstanceIds },
+                isPublished: true,
+            },
+            orderBy: [
+                { subjectInstanceId: 'asc' },
+                { order: 'asc' },
+            ],
+            include: {
+                subjectInstance: {
+                    include: {
+                        subject: { include: { subjectArea: true } },
+                        semester: true,
+                    },
+                },
+                _count: { select: { contents: true } },
+            },
+        });
+    }
+
+    async getSubjectInstancesForTeacher(teacherId: string) {
+        const assignments = await this.prisma.teachingAssignment.findMany({
+            where: { teacherId },
+            include: {
+                subjectInstance: {
+                    include: {
+                        subject: { include: { subjectArea: true } },
+                        semester: { include: { academicYear: true } },
+                    },
+                },
+            },
+        });
+
+        return assignments.map((a) => a.subjectInstance);
+    }
 }

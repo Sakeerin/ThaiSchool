@@ -126,4 +126,40 @@ export class LessonsController {
     ) {
         return this.lessonsService.reorderContents(id, contentIds);
     }
+
+    @Get('teacher/my-lessons')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get lessons created by current teacher' })
+    async getTeacherLessons(@Request() req: any) {
+        const teacherId = req.user.teacher?.id;
+        if (!teacherId) {
+            return [];
+        }
+        return this.lessonsService.findByTeacher(teacherId);
+    }
+
+    @Get('student/enrolled')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get lessons for student enrolled subjects' })
+    async getStudentLessons(@Request() req: any) {
+        const studentId = req.user.student?.id;
+        if (!studentId) {
+            return [];
+        }
+        return this.lessonsService.findForStudent(studentId);
+    }
+
+    @Get('teacher/subjects')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get subject instances for current teacher' })
+    async getTeacherSubjects(@Request() req: any) {
+        const teacherId = req.user.teacher?.id;
+        if (!teacherId) {
+            return [];
+        }
+        return this.lessonsService.getSubjectInstancesForTeacher(teacherId);
+    }
 }
