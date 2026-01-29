@@ -71,12 +71,56 @@ export class AssignmentsController {
         return this.assignmentsService.delete(id);
     }
 
+    @Get('teacher/my-assignments')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get assignments created by current teacher' })
+    async getTeacherAssignments(@Request() req: any) {
+        const teacherId = req.user.teacher?.id;
+        return this.assignmentsService.findByTeacher(teacherId);
+    }
+
+    @Get('teacher/subjects')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get subject instances for current teacher' })
+    async getTeacherSubjects(@Request() req: any) {
+        const teacherId = req.user.teacher?.id;
+        return this.assignmentsService.getSubjectInstancesForTeacher(teacherId);
+    }
+
+    @Get('student/enrolled')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get assignments for student enrolled subjects' })
+    async getStudentAssignments(@Request() req: any) {
+        const studentId = req.user.student?.id;
+        return this.assignmentsService.findForStudent(studentId);
+    }
+
+    @Get('student/my-submissions')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get current student submissions' })
+    async getMySubmissions(@Request() req: any) {
+        const studentId = req.user.student?.id;
+        return this.assignmentsService.getStudentSubmissions(studentId);
+    }
+
     @Put(':id/publish')
     @UseGuards(JwtAuthGuard)
     @ApiBearerAuth()
     @ApiOperation({ summary: 'Publish assignment' })
     async publish(@Param('id') id: string) {
         return this.assignmentsService.publish(id);
+    }
+
+    @Put(':id/unpublish')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Unpublish assignment' })
+    async unpublish(@Param('id') id: string) {
+        return this.assignmentsService.unpublish(id);
     }
 
     // Submissions

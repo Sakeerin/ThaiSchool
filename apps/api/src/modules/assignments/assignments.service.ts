@@ -160,6 +160,90 @@ export class AssignmentsService {
         });
     }
 
+    async unpublish(id: string) {
+        const assignment = await this.prisma.assignment.findUnique({ where: { id } });
+        if (!assignment) {
+            throw new NotFoundException('ไม่พบงาน');
+        }
+
+        return this.prisma.assignment.update({
+            where: { id },
+            data: {
+                isPublished: false,
+            },
+        });
+    }
+
+    async findByTeacher(teacherId: string) {
+        return this.prisma.assignment.findMany({
+            where: { createdById: teacherId },
+            orderBy: { createdAt: 'desc' },
+            include: {
+                subjectInstance: {
+                    include: {
+                        subject: { include: { subjectArea: true } },
+                        semester: { include: { academicYear: true } },
+                    },
+                },
+                _count: { select: { submissions: true } },
+            },
+        });
+    }
+
+    async getSubjectInstancesForTeacher(teacherId: string) {
+        const teachings = await this.prisma.teachingAssignment.findMany({
+            where: { teacherId },
+            include: {
+                subjectInstance: {
+                    include: {
+                        subject: { include: { subjectArea: true } },
+                        semester: { include: { academicYear: true } },
+                    },
+                },
+            },
+        });
+
+        return teachings.map(t => t.subjectInstance);
+    }
+
+    async findForStudent(studentId: string) {
+        // Get student's enrolled subject instances
+        const enrollments = await this.prisma.subjectEnrollment.findMany({
+            where: { studentId },
+            select: { subjectInstanceId: true },
+        });
+
+        const subjectInstanceIds = enrollments.map(e => e.subjectInstanceId);
+
+        // Get published assignments for those subjects
+        const assignments = await this.prisma.assignment.findMany({
+            where: {
+                subjectInstanceId: { in: subjectInstanceIds },
+                isPublished: true,
+            },
+            orderBy: { dueDate: 'asc' },
+            include: {
+                subjectInstance: {
+                    include: {
+                        subject: { include: { subjectArea: true } },
+                    },
+                },
+                submissions: {
+                    where: { studentId },
+                    take: 1,
+                },
+                _count: { select: { submissions: true } },
+            },
+        });
+
+        // Transform to include student's submission status
+        return assignments.map(assignment => ({
+            ...assignment,
+            mySubmission: assignment.submissions[0] || null,
+            submissions: undefined,
+        }));
+    }
+
     // =====================
     // Submissions
     // =====================
