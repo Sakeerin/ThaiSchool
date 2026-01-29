@@ -42,6 +42,7 @@ const roleNavigation: Record<string, { label: string; href: string; icon: any }[
         { label: 'บทเรียน', href: '/dashboard/teacher/lessons', icon: FileText },
         { label: 'การบ้าน', href: '/dashboard/teacher/assignments', icon: ClipboardList },
         { label: 'ข้อสอบ', href: '/dashboard/teacher/exams', icon: FileText },
+        { label: 'คลังข้อสอบ', href: '/dashboard/teacher/question-banks', icon: BookOpen },
         { label: 'คะแนน', href: '/dashboard/teacher/grades', icon: BarChart3 },
     ],
     STUDENT: [

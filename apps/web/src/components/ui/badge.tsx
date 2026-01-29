@@ -16,6 +16,8 @@ const badgeVariants = cva(
                 warning: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
                 danger: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
                 info: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-300',
+                outline: 'border border-gray-300 text-gray-700 bg-transparent dark:border-gray-600 dark:text-gray-300',
+                destructive: 'bg-red-500 text-white dark:bg-red-600',
             },
         },
         defaultVariants: {
