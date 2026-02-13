@@ -20,6 +20,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { AdminModule } from './modules/admin/admin.module';
 import { UploadModule } from './modules/upload/upload.module';
 import { AcademicYearsModule } from './modules/academic-years/academic-years.module';
+import { MessagesModule } from './modules/messages/messages.module';
 
 @Module({
     imports: [
@@ -48,6 +49,7 @@ import { AcademicYearsModule } from './modules/academic-years/academic-years.mod
         AdminModule,
         UploadModule,
         AcademicYearsModule,
+        MessagesModule,
     ],
 })
 export class AppModule { }

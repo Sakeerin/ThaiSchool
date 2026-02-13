@@ -5,3 +5,5 @@ export * from './students';
 export * from './teachers';
 export * from './grades';
 export * from './subjects';
+export * from './notifications';
+export * from './messages';
