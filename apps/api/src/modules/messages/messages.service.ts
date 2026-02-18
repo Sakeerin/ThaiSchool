@@ -197,7 +197,7 @@ export class MessagesService {
                 senderId,
                 receiverId: dto.receiverId,
                 content: dto.content,
-                attachments: dto.attachments || null,
+                attachments: dto.attachments || undefined,
             },
             include: {
                 sender: {

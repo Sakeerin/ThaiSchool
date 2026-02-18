@@ -137,6 +137,21 @@ export const subjectsApi = {
         const { data } = await api.get('/subjects/instances/teacher', { params });
         return data;
     },
+
+    // Admin CRUD
+    create: async (dto: { code: string; nameTh: string; nameEn?: string; description?: string; subjectAreaId: string; credits?: number; hoursPerWeek?: number; gradeLevelIds?: string[] }): Promise<Subject> => {
+        const { data } = await api.post('/subjects', dto);
+        return data;
+    },
+
+    update: async (id: string, dto: Partial<{ code: string; nameTh: string; nameEn?: string; description?: string; subjectAreaId: string; credits?: number; hoursPerWeek?: number; gradeLevelIds?: string[] }>): Promise<Subject> => {
+        const { data } = await api.put(`/subjects/${id}`, dto);
+        return data;
+    },
+
+    delete: async (id: string): Promise<void> => {
+        await api.delete(`/subjects/${id}`);
+    },
 };
 
 // Academic Years & Semesters API
