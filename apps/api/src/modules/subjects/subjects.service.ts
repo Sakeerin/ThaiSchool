@@ -58,9 +58,9 @@ export class SubjectsService {
 
         if (search) {
             where.OR = [
-                { nameTh: { contains: search, mode: 'insensitive' } },
-                { nameEn: { contains: search, mode: 'insensitive' } },
-                { code: { contains: search, mode: 'insensitive' } },
+                { nameTh: { contains: search } },
+                { nameEn: { contains: search } },
+                { code: { contains: search } },
             ];
         }
 

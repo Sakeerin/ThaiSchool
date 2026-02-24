@@ -1,9 +1,13 @@
 // Thai School LMS - Database Seed
 // Initializes essential data: grade levels, subject areas, subjects
+// and added dummy data for demo: users, profiles, classrooms
 
-import { PrismaClient, EducationStage } from '@prisma/client';
+import { PrismaClient, EducationStage, UserRole, Gender, ParentRelationship } from '@prisma/client';
 
 const prisma = new PrismaClient();
+
+// Hashed 'password123' using bcrypt (cost factor 10)
+const DEFAULT_PASSWORD_HASH = '$2b$10$HiRTJasNuSyKavU9jme8KutGySOU9dfxobAIDVNpd6bwdaU.cEE42';
 
 async function main() {
     console.log('🌱 Seeding database...');
@@ -23,6 +27,29 @@ async function main() {
     // 4. Initial Academic Year
     const academicYear = await seedAcademicYear();
     console.log(`✅ Created academic year ${academicYear.year}`);
+
+    // DUMMY DATA FOR DEMO
+    console.log('🏁 Seeding dummy data for demo...');
+
+    // 5. Admin User
+    await seedAdmin();
+    console.log('✅ Created admin user');
+
+    // 6. Teachers
+    const teachers = await seedTeachers();
+    console.log(`✅ Created ${teachers.length} teachers`);
+
+    // 7. Classrooms
+    const classrooms = await seedClassrooms(academicYear.id, gradeLevels, teachers);
+    console.log(`✅ Created ${classrooms.length} classrooms`);
+
+    // 8. Students
+    const students = await seedStudents(classrooms);
+    console.log(`✅ Created ${students.length} students`);
+
+    // 9. Parents
+    await seedParents(students);
+    console.log('✅ Created parents and linked to students');
 
     console.log('🎉 Seeding completed!');
 }
@@ -232,31 +259,6 @@ async function seedAcademicYear() {
                         startDate: new Date(`${currentYear - 543}-05-16`),
                         endDate: new Date(`${currentYear - 543}-10-10`),
                         isCurrent: true,
-                        gradingPeriods: {
-                            create: [
-                                {
-                                    name: 'คะแนนเก็บภาคเรียนที่ 1',
-                                    type: 'CLASSWORK',
-                                    weight: 0.3,
-                                    startDate: new Date(`${currentYear - 543}-05-16`),
-                                    endDate: new Date(`${currentYear - 543}-10-10`),
-                                },
-                                {
-                                    name: 'สอบกลางภาค ภาคเรียนที่ 1',
-                                    type: 'MIDTERM',
-                                    weight: 0.2,
-                                    startDate: new Date(`${currentYear - 543}-07-15`),
-                                    endDate: new Date(`${currentYear - 543}-07-25`),
-                                },
-                                {
-                                    name: 'สอบปลายภาค ภาคเรียนที่ 1',
-                                    type: 'FINAL',
-                                    weight: 0.5,
-                                    startDate: new Date(`${currentYear - 543}-09-25`),
-                                    endDate: new Date(`${currentYear - 543}-10-05`),
-                                },
-                            ],
-                        },
                     },
                     {
                         number: 2,
@@ -264,31 +266,6 @@ async function seedAcademicYear() {
                         startDate: new Date(`${currentYear - 543}-11-01`),
                         endDate: new Date(`${currentYear - 542}-03-31`),
                         isCurrent: false,
-                        gradingPeriods: {
-                            create: [
-                                {
-                                    name: 'คะแนนเก็บภาคเรียนที่ 2',
-                                    type: 'CLASSWORK',
-                                    weight: 0.3,
-                                    startDate: new Date(`${currentYear - 543}-11-01`),
-                                    endDate: new Date(`${currentYear - 542}-03-31`),
-                                },
-                                {
-                                    name: 'สอบกลางภาค ภาคเรียนที่ 2',
-                                    type: 'MIDTERM',
-                                    weight: 0.2,
-                                    startDate: new Date(`${currentYear - 543}-01-10`),
-                                    endDate: new Date(`${currentYear - 543}-01-20`),
-                                },
-                                {
-                                    name: 'สอบปลายภาค ภาคเรียนที่ 2',
-                                    type: 'FINAL',
-                                    weight: 0.5,
-                                    startDate: new Date(`${currentYear - 542}-03-01`),
-                                    endDate: new Date(`${currentYear - 542}-03-15`),
-                                },
-                            ],
-                        },
                     },
                 ],
             },
@@ -296,6 +273,178 @@ async function seedAcademicYear() {
     });
 
     return academicYear;
+}
+
+// =====================
+// DUMMY DATA SEEDING
+// =====================
+
+async function seedAdmin() {
+    return prisma.user.upsert({
+        where: { email: 'admin@school.com' },
+        update: {},
+        create: {
+            email: 'admin@school.com',
+            passwordHash: DEFAULT_PASSWORD_HASH,
+            role: UserRole.SUPER_ADMIN,
+            admin: {
+                create: {
+                    titleTh: 'นาย',
+                    firstNameTh: 'สมศักดิ์',
+                    lastNameTh: 'ใจดี',
+                    position: 'ผู้อำนวยการ',
+                }
+            }
+        }
+    });
+}
+
+async function seedTeachers() {
+    const teachersData = [
+        { email: 'teacher1@school.com', titleTh: 'นาย', firstNameTh: 'สมชาย', lastNameTh: 'สายเสมอ', position: 'ครูชำนาญการ', department: 'คณิตศาสตร์', code: 'T001', id: '1100100000001' },
+        { email: 'teacher2@school.com', titleTh: 'นางสาว', firstNameTh: 'สมศรี', lastNameTh: 'ดีเยี่ยม', position: 'ครู', department: 'ภาษาไทย', code: 'T002', id: '1100100000002' },
+        { email: 'teacher3@school.com', titleTh: 'นาย', firstNameTh: 'วิชัย', lastNameTh: 'ก้าวย่าง', position: 'ครูผู้ช่วย', department: 'วิทยาศาสตร์และเทคโนโลยี', code: 'T003', id: '1100100000003' },
+        { email: 'teacher4@school.com', titleTh: 'นาง', firstNameTh: 'ใจรัตน์', lastNameTh: 'พึ่งพิง', position: 'ครูชำนาญการพิเศษ', department: 'ภาษาต่างประเทศ', code: 'T004', id: '1100100000004' },
+        { email: 'teacher5@school.com', titleTh: 'นาย', firstNameTh: 'กอบศักดิ์', lastNameTh: 'สร้างสรรค์', position: 'ครู', department: 'ศิลปะ', code: 'T005', id: '1100100000005' },
+    ];
+
+    const teachers = [];
+    for (const data of teachersData) {
+        const teacher = await prisma.user.upsert({
+            where: { email: data.email },
+            update: { passwordHash: DEFAULT_PASSWORD_HASH },
+            create: {
+                email: data.email,
+                passwordHash: DEFAULT_PASSWORD_HASH,
+                role: UserRole.TEACHER,
+                teacher: {
+                    create: {
+                        nationalId: data.id,
+                        employeeCode: data.code,
+                        titleTh: data.titleTh,
+                        firstNameTh: data.firstNameTh,
+                        lastNameTh: data.lastNameTh,
+                        position: data.position,
+                        department: data.department,
+                    }
+                }
+            },
+            include: { teacher: true }
+        });
+        teachers.push(teacher.teacher!);
+    }
+    return teachers;
+}
+
+async function seedClassrooms(academicYearId: string, gradeLevels: any[], teachers: any[]) {
+    const classroomDefinitions = [
+        { gradeCode: 'P1', room: 1, name: 'ป.1/1', advisorIdx: 0 },
+        { gradeCode: 'P1', room: 2, name: 'ป.1/2', advisorIdx: 1 },
+        { gradeCode: 'M1', room: 1, name: 'ม.1/1', advisorIdx: 2 },
+        { gradeCode: 'M4', room: 1, name: 'ม.4/1', advisorIdx: 3 },
+    ];
+
+    const classrooms = [];
+    for (const def of classroomDefinitions) {
+        const gradeLevel = gradeLevels.find(gl => gl.code === def.gradeCode);
+        if (!gradeLevel) continue;
+
+        const classroom = await prisma.classroom.upsert({
+            where: {
+                academicYearId_gradeLevelId_room: {
+                    academicYearId,
+                    gradeLevelId: gradeLevel.id,
+                    room: def.room,
+                }
+            },
+            update: {},
+            create: {
+                academicYearId,
+                gradeLevelId: gradeLevel.id,
+                room: def.room,
+                name: def.name,
+                capacity: 40,
+                advisorId: teachers[def.advisorIdx]?.id,
+            }
+        });
+        classrooms.push(classroom);
+    }
+    return classrooms;
+}
+
+async function seedStudents(classrooms: any[]) {
+    const studentsData = [
+        { email: 'student1@school.com', titleTh: 'เด็กชาย', firstNameTh: 'ใจบุญ', lastNameTh: 'ยอดรัก', id: '1100200000001', code: 'S001', classroomIdx: 0, gender: Gender.MALE },
+        { email: 'student2@school.com', titleTh: 'เด็กหญิง', firstNameTh: 'แก้วตา', lastNameTh: 'ดวงใจ', id: '1100200000002', code: 'S002', classroomIdx: 0, gender: Gender.FEMALE },
+        { email: 'student3@school.com', titleTh: 'เด็กชาย', firstNameTh: 'ประสิทธิ์', lastNameTh: 'รุ่งเรือง', id: '1100200000003', code: 'S003', classroomIdx: 1, gender: Gender.MALE },
+        { email: 'student4@school.com', titleTh: 'นาย', firstNameTh: 'วีระ', lastNameTh: 'หาญกล้า', id: '1100200000004', code: 'S004', classroomIdx: 2, gender: Gender.MALE },
+        { email: 'student5@school.com', titleTh: 'นางสาว', firstNameTh: 'พรทิพย์', lastNameTh: 'มาลี', id: '1100200000005', code: 'S005', classroomIdx: 3, gender: Gender.FEMALE },
+    ];
+
+    const students = [];
+    for (const [idx, data] of studentsData.entries()) {
+        const student = await prisma.user.upsert({
+            where: { email: data.email },
+            update: { passwordHash: DEFAULT_PASSWORD_HASH },
+            create: {
+                email: data.email,
+                passwordHash: DEFAULT_PASSWORD_HASH,
+                role: UserRole.STUDENT,
+                student: {
+                    create: {
+                        nationalId: data.id,
+                        studentCode: data.code,
+                        titleTh: data.titleTh,
+                        firstNameTh: data.firstNameTh,
+                        lastNameTh: data.lastNameTh,
+                        gender: data.gender,
+                        birthDate: new Date('2015-01-01'),
+                        classroomId: classrooms[data.classroomIdx].id,
+                        studentNumber: idx + 1,
+                        enrollmentDate: new Date(),
+                    }
+                }
+            },
+            include: { student: true }
+        });
+        students.push(student.student!);
+    }
+    return students;
+}
+
+async function seedParents(students: any[]) {
+    const parentsData = [
+        { email: 'parent1@school.com', titleTh: 'นาย', firstNameTh: 'บุญมี', lastNameTh: 'ใจรัก', phone: '0812345678', relationship: ParentRelationship.FATHER, studentIdx: 0 },
+        { email: 'parent2@school.com', titleTh: 'นาง', firstNameTh: 'สมพร', lastNameTh: 'ใจรัก', phone: '0812345679', relationship: ParentRelationship.MOTHER, studentIdx: 1 },
+    ];
+
+    for (const data of parentsData) {
+        await prisma.user.upsert({
+            where: { email: data.email },
+            update: { passwordHash: DEFAULT_PASSWORD_HASH },
+            create: {
+                email: data.email,
+                phone: data.phone,
+                passwordHash: DEFAULT_PASSWORD_HASH,
+                role: UserRole.PARENT,
+                parent: {
+                    create: {
+                        titleTh: data.titleTh,
+                        firstNameTh: data.firstNameTh,
+                        lastNameTh: data.lastNameTh,
+                        relationship: data.relationship,
+                        phone: data.phone,
+                        children: {
+                            create: {
+                                studentId: students[data.studentIdx].id,
+                                isPrimary: true,
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
 }
 
 main()

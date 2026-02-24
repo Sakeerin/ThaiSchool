@@ -22,7 +22,7 @@ export class ClassroomsService {
         }
 
         if (search) {
-            where.name = { contains: search, mode: 'insensitive' };
+            where.name = { contains: search };
         }
 
         return this.prisma.paginate('classroom', {

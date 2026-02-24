@@ -21,6 +21,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { UploadModule } from './modules/upload/upload.module';
 import { AcademicYearsModule } from './modules/academic-years/academic-years.module';
 import { MessagesModule } from './modules/messages/messages.module';
+import { HealthModule } from './modules/health/health.module';
 
 @Module({
     imports: [
@@ -50,6 +51,7 @@ import { MessagesModule } from './modules/messages/messages.module';
         UploadModule,
         AcademicYearsModule,
         MessagesModule,
+        HealthModule,
     ],
 })
 export class AppModule { }

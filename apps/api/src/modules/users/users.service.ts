@@ -19,11 +19,11 @@ export class UsersService {
 
         if (search) {
             where.OR = [
-                { email: { contains: search, mode: 'insensitive' } },
-                { student: { firstNameTh: { contains: search, mode: 'insensitive' } } },
-                { student: { lastNameTh: { contains: search, mode: 'insensitive' } } },
-                { teacher: { firstNameTh: { contains: search, mode: 'insensitive' } } },
-                { teacher: { lastNameTh: { contains: search, mode: 'insensitive' } } },
+                { email: { contains: search } },
+                { student: { firstNameTh: { contains: search } } },
+                { student: { lastNameTh: { contains: search } } },
+                { teacher: { firstNameTh: { contains: search } } },
+                { teacher: { lastNameTh: { contains: search } } },
             ];
         }
 

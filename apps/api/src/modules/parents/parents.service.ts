@@ -16,8 +16,8 @@ export class ParentsService {
 
         if (search) {
             where.OR = [
-                { firstNameTh: { contains: search, mode: 'insensitive' } },
-                { lastNameTh: { contains: search, mode: 'insensitive' } },
+                { firstNameTh: { contains: search } },
+                { lastNameTh: { contains: search } },
                 { phone: { contains: search } },
             ];
         }

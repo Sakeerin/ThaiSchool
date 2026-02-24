@@ -32,7 +32,7 @@ export class AssignmentsService {
         }
 
         if (search) {
-            where.title = { contains: search, mode: 'insensitive' };
+            where.title = { contains: search };
         }
 
         return this.prisma.paginate('assignment', {

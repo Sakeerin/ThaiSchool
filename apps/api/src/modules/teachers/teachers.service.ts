@@ -20,9 +20,9 @@ export class TeachersService {
 
         if (search) {
             where.OR = [
-                { firstNameTh: { contains: search, mode: 'insensitive' } },
-                { lastNameTh: { contains: search, mode: 'insensitive' } },
-                { employeeCode: { contains: search, mode: 'insensitive' } },
+                { firstNameTh: { contains: search } },
+                { lastNameTh: { contains: search } },
+                { employeeCode: { contains: search } },
                 { nationalId: { contains: search } },
             ];
         }

@@ -7,7 +7,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -562,7 +562,7 @@ model Question {
   // Metadata
   difficulty      Difficulty @default(MEDIUM)
   points          Float     @default(1)
-  tags            String[]
+  tags            Json?     // Array of strings
   
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -794,9 +794,9 @@ model Announcement {
   priority    Priority  @default(NORMAL)
   
   // Targeting
-  targetRoles UserRole[]
-  targetGradeLevels String[]  // Grade level IDs
-  targetClassrooms  String[]  // Classroom IDs
+  targetRoles       Json?    // Array of UserRole
+  targetGradeLevels Json?    // Array of Grade level IDs
+  targetClassrooms  Json?    // Array of Classroom IDs
   
   attachments Json?     // Array of file URLs
   

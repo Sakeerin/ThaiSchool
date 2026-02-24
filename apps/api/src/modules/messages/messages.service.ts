@@ -304,28 +304,28 @@ export class MessagesService {
                 role: { in: allowedRoles as any },
                 isActive: true,
                 OR: [
-                    { email: { contains: query, mode: 'insensitive' } },
+                    { email: { contains: query } },
                     {
                         teacher: {
                             OR: [
-                                { firstNameTh: { contains: query, mode: 'insensitive' } },
-                                { lastNameTh: { contains: query, mode: 'insensitive' } },
+                                { firstNameTh: { contains: query } },
+                                { lastNameTh: { contains: query } },
                             ],
                         },
                     },
                     {
                         parent: {
                             OR: [
-                                { firstNameTh: { contains: query, mode: 'insensitive' } },
-                                { lastNameTh: { contains: query, mode: 'insensitive' } },
+                                { firstNameTh: { contains: query } },
+                                { lastNameTh: { contains: query } },
                             ],
                         },
                     },
                     {
                         student: {
                             OR: [
-                                { firstNameTh: { contains: query, mode: 'insensitive' } },
-                                { lastNameTh: { contains: query, mode: 'insensitive' } },
+                                { firstNameTh: { contains: query } },
+                                { lastNameTh: { contains: query } },
                             ],
                         },
                     },
